@@ -28,6 +28,12 @@ public class ItemController {
                 .collect(Collectors.toList());
     }
 
+    @GetMapping("/getAllItemsByStudentId/{studentId}")
+    public ResponseEntity<List<Item>> getItemsBySeller(@PathVariable Long studentId) {
+        List<Item> items = itemService.getItemsBySeller(studentId);
+        return ResponseEntity.ok(items);
+    }
+
     @GetMapping("/getItemById/{id}")
     public ResponseEntity<ItemDTO> getItemById(@PathVariable Long id) {
         return itemService.getItemById(id)
@@ -82,6 +88,8 @@ public class ItemController {
 
         if (item.getSeller() != null) {
             dto.setSellerId(item.getSeller().getStudentId());
+            dto.setSellerFirstName(item.getSeller().getFirstName());
+            dto.setSellerLastName(item.getSeller().getLastName());
         }
         return dto;
     }

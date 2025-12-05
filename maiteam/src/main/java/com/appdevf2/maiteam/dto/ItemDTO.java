@@ -5,6 +5,8 @@ import java.time.Instant;
 public class ItemDTO {
     private Long itemId;
     private Long sellerId;
+    private String sellerFirstName;
+    private String sellerLastName;
     private String itemName;
     private String description;
     private Double price;
@@ -25,6 +27,12 @@ public class ItemDTO {
 
     public Long getSellerId() { return sellerId; }
     public void setSellerId(Long sellerId) { this.sellerId = sellerId; }
+
+    public String getSellerFirstName() { return sellerFirstName; }
+    public void setSellerFirstName(String sellerFirstName) { this.sellerFirstName = sellerFirstName; }
+
+    public String getSellerLastName() { return sellerLastName; }
+    public void setSellerLastName(String sellerLastName) { this.sellerLastName = sellerLastName; }
 
     public String getItemName() { return itemName; }
     public void setItemName(String itemName) { this.itemName = itemName; }

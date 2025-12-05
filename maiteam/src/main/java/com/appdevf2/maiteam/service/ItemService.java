@@ -26,6 +26,10 @@ public class ItemService {
         return itemRepository.findAll();
     }
 
+    public List<Item> getItemsBySeller(Long studentId) {
+        return itemRepository.findBySeller_StudentId(studentId);
+    }
+
     public Optional<Item> getItemById(Long itemId) {
         return itemRepository.findById(itemId);
     }
