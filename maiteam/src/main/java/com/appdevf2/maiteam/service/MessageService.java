@@ -10,8 +10,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class MessageService {
@@ -25,6 +24,29 @@ public class MessageService {
         this.messageRepository = messageRepository;
         this.studentRepository = studentRepository;
         this.itemRepository = itemRepository;
+    }
+
+    public List<Message> getConversation(Long userId1, Long userId2) {
+        return messageRepository.findBySender_StudentIdAndReceiver_StudentIdOrSender_StudentIdAndReceiver_StudentIdOrderBySentAtAsc(
+                userId1, userId2, userId2, userId1
+        );
+    }
+
+    public List<Student> getContacts(Long userId) {
+        // Fetch all messages involving this user
+        List<Message> messages = messageRepository.findBySender_StudentIdOrReceiver_StudentIdOrderBySentAtDesc(userId, userId);
+        
+        Set<Long> contactIds = new HashSet<>();
+        List<Student> contacts = new ArrayList<>();
+
+        for (Message msg : messages) {
+            Student otherParty = msg.getSender().getStudentId().equals(userId) ? msg.getReceiver() : msg.getSender();
+            if (!contactIds.contains(otherParty.getStudentId())) {
+                contactIds.add(otherParty.getStudentId());
+                contacts.add(otherParty);
+            }
+        }
+        return contacts;
     }
 
     @Transactional
@@ -80,7 +102,6 @@ public class MessageService {
             message.setMessageContent(newMessageData.getMessageContent());
             message.setMessageType(newMessageData.getMessageType());
             
-            // Only update read status if explicitly provided
             if(newMessageData.getIsRead() != null) {
                 message.setIsRead(newMessageData.getIsRead());
             }
@@ -96,5 +117,10 @@ public class MessageService {
         } else {
             throw new RuntimeException("Message not found with ID: " + id);
         }
+    }
+
+    @Transactional
+    public void deleteConversation(Long userId1, Long userId2) {
+        messageRepository.deleteConversation(userId1, userId2);
     }
 }
