@@ -6,24 +6,31 @@ import com.appdevf2.maiteam.entity.Item;
 import com.appdevf2.maiteam.repository.MessageRepository;
 import com.appdevf2.maiteam.repository.StudentRepository;
 import com.appdevf2.maiteam.repository.ItemRepository;
+
 import jakarta.transaction.Transactional;
+
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
+
+import com.appdevf2.maiteam.entity.Notification;
 
 @Service
 public class MessageService {
     private final MessageRepository messageRepository;
     private final StudentRepository studentRepository;
     private final ItemRepository itemRepository;
+    private final NotificationService notificationService; 
 
     public MessageService(MessageRepository messageRepository, 
                           StudentRepository studentRepository, 
-                          ItemRepository itemRepository) {
+                          ItemRepository itemRepository,
+                          NotificationService notificationService) {
         this.messageRepository = messageRepository;
         this.studentRepository = studentRepository;
         this.itemRepository = itemRepository;
+        this.notificationService = notificationService;
     }
 
     public List<Message> getConversation(Long userId1, Long userId2) {
@@ -49,31 +56,43 @@ public class MessageService {
         return contacts;
     }
 
-    @Transactional
+        @Transactional
     public Message createMessage(Message message) {
-        // 1. Validate Sender
+        // 1. Validate Sender (Existing)
         if (message.getSender() != null && message.getSender().getStudentId() != null) {
             Student sender = studentRepository.findById(message.getSender().getStudentId())
-                    .orElseThrow(() -> new RuntimeException("Sender not found with ID: " + message.getSender().getStudentId()));
+                    .orElseThrow(() -> new RuntimeException("Sender not found"));
             message.setSender(sender);
         } else {
             throw new RuntimeException("Sender ID is required.");
         }
 
-        // 2. Validate Receiver
+        // 2. Validate Receiver (Existing)
         if (message.getReceiver() != null && message.getReceiver().getStudentId() != null) {
             Student receiver = studentRepository.findById(message.getReceiver().getStudentId())
-                    .orElseThrow(() -> new RuntimeException("Receiver not found with ID: " + message.getReceiver().getStudentId()));
+                    .orElseThrow(() -> new RuntimeException("Receiver not found"));
             message.setReceiver(receiver);
         } else {
             throw new RuntimeException("Receiver ID is required.");
         }
         
-        // 3. Validate Item (Optional)
+        // 3. Validate Item & Create Notification
         if (message.getItem() != null && message.getItem().getItemId() != null) {
             Item item = itemRepository.findById(message.getItem().getItemId())
-                    .orElseThrow(() -> new RuntimeException("Item not found with ID: " + message.getItem().getItemId()));
+                    .orElseThrow(() -> new RuntimeException("Item not found"));
             message.setItem(item);
+
+            // --- NOTIFICATION LOGIC ---
+            // Create a notification for the Receiver (Seller)
+            Notification notif = new Notification();
+            notif.setStudent(message.getReceiver()); // Seller gets the alert
+            notif.setTitle("New Inquiry");
+            notif.setMessage(message.getSender().getFirstName() + " is interested in '" + item.getItemName() + "'");
+            notif.setType("message");
+            notif.setRead(false);
+            
+            notificationService.createNotification(notif);
+            
         } else {
             message.setItem(null);
         }
