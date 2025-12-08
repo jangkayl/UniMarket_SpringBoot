@@ -15,6 +15,11 @@ public class TransactionDTO {
     private Long buyerId;
     private Long sellerId;
     private Long itemId;
+    private String itemName;
+
+    private String buyerName;
+    private String sellerName;
+    private String itemImage; 
 
     public TransactionDTO() {}
 
@@ -48,4 +53,16 @@ public class TransactionDTO {
 
     public Long getItemId() { return itemId; }
     public void setItemId(Long itemId) { this.itemId = itemId; }
+
+    public String getItemName() { return itemName; }
+    public void setItemName(String itemName) { this.itemName = itemName; }
+    
+    public String getBuyerName() { return buyerName; }
+    public void setBuyerName(String buyerName) { this.buyerName = buyerName; }
+
+    public String getSellerName() { return sellerName; }
+    public void setSellerName(String sellerName) { this.sellerName = sellerName; }
+
+    public String getItemImage() { return itemImage; }
+    public void setItemImage(String itemImage) { this.itemImage = itemImage; }
 }

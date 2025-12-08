@@ -52,7 +52,6 @@ public class WalletService {
     public void setWalletPin(Long studentId, String newPin, String oldPin) {
         Wallet wallet = getWalletByStudentId(studentId);
         
-        // If a PIN already exists, verify the old one
         if (wallet.getPin() != null && !wallet.getPin().isEmpty()) {
             if (oldPin == null || !wallet.getPin().equals(oldPin)) {
                 throw new RuntimeException("Incorrect current PIN");
@@ -83,31 +82,54 @@ public class WalletService {
         return transactionRepository.save(tx);
     }
 
-        @Transactional
-    public WalletTransaction withdrawFunds(Long studentId, Double amount, String provider, String accountNumber, String pin) {
+    // --- NEW: Hold Funds for Purchase ---
+    @Transactional
+    public void holdFunds(Long studentId, Double amount, String itemName) {
         Wallet wallet = getWalletByStudentId(studentId);
-        
-        // 1. Verify PIN
-        if (wallet.getPin() == null || !wallet.getPin().equals(pin)) {
-            throw new RuntimeException("Invalid Security PIN");
-        }
 
-        // 2. Check Balance
         if (wallet.getBalance() < amount) {
-            throw new RuntimeException("Insufficient funds");
+            throw new RuntimeException("Insufficient wallet balance for this purchase.");
         }
 
-        // 3. Deduct Balance
+        // Deduct balance
         wallet.setBalance(wallet.getBalance() - amount);
         wallet.setUpdatedAt(LocalDateTime.now());
         walletRepository.save(wallet);
 
-        // 4. Record Transaction
+        // Record the deduction in history
         WalletTransaction tx = new WalletTransaction();
         tx.setWallet(wallet);
         tx.setAmount(amount);
         tx.setType("DEBIT");
-        tx.setStatus("Completed"); // Assuming instant for demo
+        tx.setStatus("HOLD"); // Mark as HELD until transaction completes/cancels
+        tx.setDescription("Payment held for: " + itemName);
+        tx.setTransactionDate(LocalDateTime.now());
+        
+        transactionRepository.save(tx);
+    }
+
+    // --- NEW: Withdraw Funds ---
+    @Transactional
+    public WalletTransaction withdrawFunds(Long studentId, Double amount, String provider, String accountNumber, String pin) {
+        Wallet wallet = getWalletByStudentId(studentId);
+        
+        if (wallet.getPin() == null || !wallet.getPin().equals(pin)) {
+            throw new RuntimeException("Invalid Security PIN");
+        }
+
+        if (wallet.getBalance() < amount) {
+            throw new RuntimeException("Insufficient funds");
+        }
+
+        wallet.setBalance(wallet.getBalance() - amount);
+        wallet.setUpdatedAt(LocalDateTime.now());
+        walletRepository.save(wallet);
+
+        WalletTransaction tx = new WalletTransaction();
+        tx.setWallet(wallet);
+        tx.setAmount(amount);
+        tx.setType("DEBIT");
+        tx.setStatus("Completed");
         tx.setDescription("Withdrawal to " + provider + " (" + accountNumber + ")");
         tx.setTransactionDate(LocalDateTime.now());
         

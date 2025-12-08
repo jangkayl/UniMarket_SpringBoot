@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.*;
 
+import org.springframework.context.annotation.Lazy;
+
 import com.appdevf2.maiteam.entity.Notification;
 
 @Service
@@ -26,7 +28,7 @@ public class MessageService {
     public MessageService(MessageRepository messageRepository, 
                           StudentRepository studentRepository, 
                           ItemRepository itemRepository,
-                          NotificationService notificationService) {
+                          @Lazy NotificationService notificationService) {
         this.messageRepository = messageRepository;
         this.studentRepository = studentRepository;
         this.itemRepository = itemRepository;
@@ -56,54 +58,48 @@ public class MessageService {
         return contacts;
     }
 
-        @Transactional
+    @Transactional
     public Message createMessage(Message message) {
-        // 1. Validate Sender (Existing)
+        // 1. Validate Sender
         if (message.getSender() != null && message.getSender().getStudentId() != null) {
             Student sender = studentRepository.findById(message.getSender().getStudentId())
                     .orElseThrow(() -> new RuntimeException("Sender not found"));
             message.setSender(sender);
-        } else {
-            throw new RuntimeException("Sender ID is required.");
         }
 
-        // 2. Validate Receiver (Existing)
+        // 2. Validate Receiver
         if (message.getReceiver() != null && message.getReceiver().getStudentId() != null) {
             Student receiver = studentRepository.findById(message.getReceiver().getStudentId())
                     .orElseThrow(() -> new RuntimeException("Receiver not found"));
             message.setReceiver(receiver);
-        } else {
-            throw new RuntimeException("Receiver ID is required.");
         }
-        
+
         // 3. Validate Item & Create Notification
         if (message.getItem() != null && message.getItem().getItemId() != null) {
             Item item = itemRepository.findById(message.getItem().getItemId())
                     .orElseThrow(() -> new RuntimeException("Item not found"));
             message.setItem(item);
 
-            // --- NOTIFICATION LOGIC ---
-            // Create a notification for the Receiver (Seller)
+            // --- NOTIFICATION TRIGGER ---
+            // Only trigger if it's an inquiry about an item
+            
             Notification notif = new Notification();
-            notif.setStudent(message.getReceiver()); // Seller gets the alert
+            notif.setStudent(message.getReceiver()); // Seller gets notified
             notif.setTitle("New Inquiry");
-            notif.setMessage(message.getSender().getFirstName() + " is interested in '" + item.getItemName() + "'");
+            notif.setMessage(message.getSender().getFirstName() + " is asking about '" + item.getItemName() + "'");
             notif.setType("message");
             notif.setRead(false);
             
             notificationService.createNotification(notif);
-            
         } else {
             message.setItem(null);
         }
-        
+
         if (message.getSentAt() == null) {
             message.setSentAt(Instant.now());
         }
-        if (message.getIsRead() == null) {
-            message.setIsRead(false);
-        }
-        
+        message.setIsRead(false);
+
         return messageRepository.save(message);
     }
 
@@ -142,4 +138,5 @@ public class MessageService {
     public void deleteConversation(Long userId1, Long userId2) {
         messageRepository.deleteConversation(userId1, userId2);
     }
+
 }
