@@ -32,6 +32,10 @@ public class NotificationService {
         return notificationRepository.save(notification);
     }
 
+    public List<Notification> getUserNotificationsById(Long userId) {
+        return notificationRepository.findByStudent_StudentIdOrderByCreatedAtDesc(userId);
+    }
+
     public List<Notification> getAllNotifications() {
         return notificationRepository.findAll();
     }

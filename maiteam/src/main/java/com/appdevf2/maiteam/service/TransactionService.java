@@ -141,10 +141,7 @@ public class TransactionService {
             sendNotification(transaction.getSeller(), "Item Rented Out", message, "rent");
         } else {
             transaction.setStatus("Completed");
-            Item item = transaction.getItem();
-            item.setAvailabilityStatus("SOLD");
-            itemRepository.save(item);
-            
+
             String message = String.format(MSG_ORDER_COMPLETED, transaction.getBuyer().getFirstName(), transaction.getItem().getItemName());
             sendNotification(transaction.getSeller(), "Transaction Completed", message, "payment");
         }
@@ -230,7 +227,6 @@ public class TransactionService {
         sendNotification(recipient, "Transaction Cancelled", message, "order");
     }
 
-    // --- FIX: Updated Logic for Active Transaction using standard naming ---
     public Optional<Transaction> getActiveTransaction(Long userId1, Long userId2) {
         // Pass arguments in correct order for (Buyer1 & Seller2) OR (Buyer2 & Seller1)
         List<Transaction> history = transactionRepository.findByBuyer_StudentIdAndSeller_StudentIdOrBuyer_StudentIdAndSeller_StudentIdOrderByTransactionIdDesc(

@@ -11,4 +11,6 @@ import com.appdevf2.maiteam.entity.Notification;
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     // Custom query to find notifications by specific user
     List<Notification> findByStudent_StudentId(Long studentId);
+
+    List<Notification> findByStudent_StudentIdOrderByCreatedAtDesc(Long studentId);
 }

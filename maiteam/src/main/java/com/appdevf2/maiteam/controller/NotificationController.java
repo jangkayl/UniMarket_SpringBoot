@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.appdevf2.maiteam.dto.NotificationDTO;
@@ -32,6 +33,11 @@ public class NotificationController {
 
         Notification saved = notificationService.createNotification(notification);
         return convertToDTO(saved);
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<List<Notification>> getUserNotificationsById(@PathVariable Long userId) {
+        return ResponseEntity.ok(notificationService.getUserNotificationsById(userId));
     }
 
     @GetMapping("/getAllNotifications")
