@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class WalletService {
@@ -48,16 +49,13 @@ public class WalletService {
         return transactionRepository.findByWallet_WalletIdOrderByTransactionDateDesc(wallet.getWalletId());
     }
 
-    // --- PIN Management ---
     public void setWalletPin(Long studentId, String newPin, String oldPin) {
         Wallet wallet = getWalletByStudentId(studentId);
-        
         if (wallet.getPin() != null && !wallet.getPin().isEmpty()) {
             if (oldPin == null || !wallet.getPin().equals(oldPin)) {
                 throw new RuntimeException("Incorrect current PIN");
             }
         }
-        
         wallet.setPin(newPin); 
         wallet.setUpdatedAt(LocalDateTime.now());
         walletRepository.save(wallet);
@@ -82,7 +80,6 @@ public class WalletService {
         return transactionRepository.save(tx);
     }
 
-    // --- NEW: Hold Funds for Purchase ---
     @Transactional
     public void holdFunds(Long studentId, Double amount, String itemName) {
         Wallet wallet = getWalletByStudentId(studentId);
@@ -91,24 +88,43 @@ public class WalletService {
             throw new RuntimeException("Insufficient wallet balance for this purchase.");
         }
 
-        // Deduct balance
         wallet.setBalance(wallet.getBalance() - amount);
         wallet.setUpdatedAt(LocalDateTime.now());
         walletRepository.save(wallet);
 
-        // Record the deduction in history
         WalletTransaction tx = new WalletTransaction();
         tx.setWallet(wallet);
         tx.setAmount(amount);
         tx.setType("DEBIT");
-        tx.setStatus("HOLD"); // Mark as HELD until transaction completes/cancels
+        tx.setStatus("HOLD"); 
         tx.setDescription("Payment held for: " + itemName);
         tx.setTransactionDate(LocalDateTime.now());
         
         transactionRepository.save(tx);
     }
 
-    // --- NEW: Withdraw Funds ---
+    // --- FIX: Updated Logic to use Wallet ID ---
+    @Transactional
+    public void processPayment(Long buyerId, Long sellerId, Double amount, String itemName) {
+        // 1. Get Buyer Wallet to get the ID
+        Wallet buyerWallet = getWalletByStudentId(buyerId);
+
+        // 2. Find the HOLD transaction using Wallet ID
+        Optional<WalletTransaction> holdTx = transactionRepository.findTopByWallet_WalletIdAndStatusAndDescriptionContainingOrderByTransactionDateDesc(
+            buyerWallet.getWalletId(), "HOLD", itemName
+        );
+
+        if (holdTx.isPresent()) {
+            WalletTransaction tx = holdTx.get();
+            tx.setStatus("Completed");
+            tx.setDescription("Payment for: " + itemName); 
+            transactionRepository.save(tx);
+        }
+
+        // 3. Credit Seller
+        addFunds(sellerId, amount, "Sale: " + itemName, "SALE-" + System.currentTimeMillis());
+    }
+
     @Transactional
     public WalletTransaction withdrawFunds(Long studentId, Double amount, String provider, String accountNumber, String pin) {
         Wallet wallet = getWalletByStudentId(studentId);

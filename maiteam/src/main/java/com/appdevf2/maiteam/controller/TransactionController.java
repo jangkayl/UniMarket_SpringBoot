@@ -86,7 +86,7 @@ public class TransactionController {
         }
     }
 
-    // --- Accept Order ---
+     // --- Accept Order ---
     @PostMapping("/{id}/accept")
     public ResponseEntity<?> acceptTransaction(@PathVariable Long id, @RequestBody Map<String, Long> payload) {
         try {
@@ -97,12 +97,34 @@ public class TransactionController {
         }
     }
 
-    // --- Confirm Receipt / Complete ---
+    // --- Confirm Receipt ---
     @PostMapping("/{id}/confirm")
     public ResponseEntity<?> confirmTransaction(@PathVariable Long id, @RequestBody Map<String, Long> payload) {
         try {
             transactionService.confirmTransaction(id, payload.get("userId"));
-            return ResponseEntity.ok(Map.of("message", "Transaction completed"));
+            return ResponseEntity.ok(Map.of("message", "Transaction confirmed"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // --- Return Item ---
+    @PostMapping("/{id}/return")
+    public ResponseEntity<?> markAsReturned(@PathVariable Long id, @RequestBody Map<String, Long> payload) {
+        try {
+            transactionService.markAsReturned(id, payload.get("userId"));
+            return ResponseEntity.ok(Map.of("message", "Return initiated"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // --- Complete Return ---
+    @PostMapping("/{id}/complete-return")
+    public ResponseEntity<?> completeReturn(@PathVariable Long id, @RequestBody Map<String, Long> payload) {
+        try {
+            transactionService.completeReturn(id, payload.get("userId"));
+            return ResponseEntity.ok(Map.of("message", "Return confirmed, transaction closed"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -118,21 +140,9 @@ public class TransactionController {
         dto.setTransactionDate(entity.getTransactionDate());
         dto.setDueDate(entity.getDueDate());
         dto.setNotes(entity.getNotes());
-
-        if (entity.getBuyer() != null) {
-            dto.setBuyerId(entity.getBuyer().getStudentId());
-            dto.setBuyerName(entity.getBuyer().getFirstName() + " " + entity.getBuyer().getLastName());
-        }
-        if (entity.getSeller() != null) {
-            dto.setSellerId(entity.getSeller().getStudentId());
-            dto.setSellerName(entity.getSeller().getFirstName() + " " + entity.getSeller().getLastName());
-        }
-        if (entity.getItem() != null) {
-            dto.setItemId(entity.getItem().getItemId());
-            dto.setItemName(entity.getItem().getItemName());
-            dto.setItemImage(entity.getItem().getItemPhoto());
-        }
-
+        if (entity.getBuyer() != null) { dto.setBuyerId(entity.getBuyer().getStudentId()); dto.setBuyerName(entity.getBuyer().getFirstName() + " " + entity.getBuyer().getLastName()); }
+        if (entity.getSeller() != null) { dto.setSellerId(entity.getSeller().getStudentId()); dto.setSellerName(entity.getSeller().getFirstName() + " " + entity.getSeller().getLastName()); }
+        if (entity.getItem() != null) { dto.setItemId(entity.getItem().getItemId()); dto.setItemName(entity.getItem().getItemName()); dto.setItemImage(entity.getItem().getItemPhoto()); }
         return dto;
     }
 
@@ -144,22 +154,9 @@ public class TransactionController {
         entity.setTransactionDate(dto.getTransactionDate());
         entity.setDueDate(dto.getDueDate());
         entity.setNotes(dto.getNotes());
-
-        if (dto.getBuyerId() != null) {
-            Student buyer = new Student();
-            buyer.setStudentId(dto.getBuyerId());
-            entity.setBuyer(buyer);
-        }
-        if (dto.getSellerId() != null) {
-            Student seller = new Student();
-            seller.setStudentId(dto.getSellerId());
-            entity.setSeller(seller);
-        }
-        if (dto.getItemId() != null) {
-            Item item = new Item();
-            item.setItemId(dto.getItemId());
-            entity.setItem(item);
-        }
+        if (dto.getBuyerId() != null) { Student s = new Student(); s.setStudentId(dto.getBuyerId()); entity.setBuyer(s); }
+        if (dto.getSellerId() != null) { Student s = new Student(); s.setStudentId(dto.getSellerId()); entity.setSeller(s); }
+        if (dto.getItemId() != null) { Item i = new Item(); i.setItemId(dto.getItemId()); entity.setItem(i); }
         return entity;
     }
 }

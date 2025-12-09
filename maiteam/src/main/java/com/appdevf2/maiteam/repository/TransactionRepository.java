@@ -1,6 +1,7 @@
 package com.appdevf2.maiteam.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.appdevf2.maiteam.entity.Transaction;
 
@@ -21,4 +22,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     // History logic
     List<Transaction> findByBuyer_StudentIdOrSeller_StudentIdOrderByTransactionDateDesc(Long buyerId, Long sellerId);
+
+    // Fallback active logic
+    Optional<Transaction> findTopByBuyer_StudentIdAndSeller_StudentIdOrBuyer_StudentIdAndSeller_StudentIdOrderByTransactionDateDesc(
+            Long buyerId1, Long sellerId1, Long buyerId2, Long sellerId2
+    );
 }
