@@ -10,4 +10,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ItemRepository extends JpaRepository<Item, Long> {
     List<Item> findBySeller_StudentId(Long studentId);
+
+    // --- Find items by Seller ---
+    List<Item> findBySeller_StudentIdOrderByCreatedAtDesc(Long sellerId);
 }

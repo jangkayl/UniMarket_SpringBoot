@@ -4,6 +4,7 @@ import com.appdevf2.maiteam.dto.ItemDTO;
 import com.appdevf2.maiteam.entity.Item;
 import com.appdevf2.maiteam.entity.Student;
 import com.appdevf2.maiteam.service.ItemService;
+
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
@@ -15,7 +16,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -129,6 +133,37 @@ public class ItemController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
+    }
+
+     // --- Manual Mapping to avoid Infinite Recursion ---
+    @GetMapping("/seller/{sellerId}")
+    public ResponseEntity<List<Map<String, Object>>> getItemsBySellerId(@PathVariable Long sellerId) {
+        List<Item> items = itemService.getItemsBySellerId(sellerId);
+        List<Map<String, Object>> safeItems = new ArrayList<>();
+
+        for (Item item : items) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("itemId", item.getItemId());
+            map.put("itemName", item.getItemName());
+            map.put("description", item.getDescription());
+            map.put("price", item.getPrice());
+            map.put("itemPhoto", item.getItemPhoto());
+            map.put("itemPhotoId", item.getItemPhotoId());
+            map.put("category", item.getCategory());
+            map.put("condition", item.getCondition());
+            map.put("availabilityStatus", item.getAvailabilityStatus());
+            map.put("transactionType", item.getTransactionType());
+            map.put("rentalFee", item.getRentalFee());
+            map.put("rentalDurationDays", item.getRentalDurationDays());
+            map.put("createdAt", item.getCreatedAt());
+            map.put("updatedAt", item.getUpdatedAt());
+            // We don't include the full 'seller' object here to stop the loop
+            map.put("sellerId", item.getSeller().getStudentId()); 
+            
+            safeItems.add(map);
+        }
+
+        return ResponseEntity.ok(safeItems);
     }
 
     // --- Helper: Entity to DTO ---

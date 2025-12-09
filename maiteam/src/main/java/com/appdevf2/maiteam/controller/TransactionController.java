@@ -4,6 +4,7 @@ import com.appdevf2.maiteam.dto.TransactionDTO;
 import com.appdevf2.maiteam.entity.Item;
 import com.appdevf2.maiteam.entity.Student;
 import com.appdevf2.maiteam.entity.Transaction;
+import com.appdevf2.maiteam.repository.ReviewRepository;
 import com.appdevf2.maiteam.service.TransactionService;
 
 import org.springframework.http.ResponseEntity;
@@ -17,30 +18,29 @@ import java.util.stream.Collectors;
 public class TransactionController {
 
     private final TransactionService transactionService;
+    private final ReviewRepository reviewRepository;
 
-    public TransactionController(TransactionService transactionService) {
+    public TransactionController(TransactionService transactionService, ReviewRepository reviewRepository) {
         this.transactionService = transactionService;
+        this.reviewRepository = reviewRepository;
     }
 
     @PostMapping("/addTransaction")
     public TransactionDTO addTransaction(@RequestBody TransactionDTO dto) {
+        // For new transaction, hasReviewed is false by default, no userId needed for checking yet
         Transaction transaction = convertToEntity(dto);
         Transaction saved = transactionService.save(transaction);
-        return convertToDTO(saved);
+        return convertToDTO(saved, null); 
     }
 
-    @GetMapping("/getAllTransactions")
+     @GetMapping("/getAllTransactions")
     public List<TransactionDTO> getAllTransactions() {
-        return transactionService.findAll().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        return transactionService.findAll().stream().map(t -> convertToDTO(t, null)).collect(Collectors.toList());
     }
 
-    @PutMapping("/updateTransaction/{id}")
+     @PutMapping("/updateTransaction/{id}")
     public TransactionDTO updateTransaction(@PathVariable Long id, @RequestBody TransactionDTO dto) {
-        Transaction transaction = convertToEntity(dto);
-        Transaction updated = transactionService.update(id, transaction);
-        return convertToDTO(updated);
+        return convertToDTO(transactionService.update(id, convertToEntity(dto)), null);
     }
 
     @DeleteMapping("/deleteTransaction/{id}")
@@ -50,27 +50,19 @@ public class TransactionController {
 
     // --- Uses the new "smart" active transaction logic ---
     @GetMapping("/active")
-    public ResponseEntity<TransactionDTO> getActiveTransaction(
-            @RequestParam Long userId1,
-            @RequestParam Long userId2) {
-        return transactionService.getActiveTransaction(userId1, userId2)
-                .map(this::convertToDTO)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.noContent().build());
+    public ResponseEntity<TransactionDTO> getActiveTransaction(@RequestParam Long userId1, @RequestParam Long userId2) {
+        return transactionService.getActiveTransaction(userId1, userId2).map(t -> convertToDTO(t, userId1)).map(ResponseEntity::ok).orElse(ResponseEntity.noContent().build());
     }
 
-    @GetMapping("/pending/{userId}")
+   @GetMapping("/pending/{userId}")
     public ResponseEntity<List<TransactionDTO>> getPendingTransactions(@PathVariable Long userId) {
-        List<TransactionDTO> pending = transactionService.getPendingTransactionsForUser(userId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(pending);
+        return ResponseEntity.ok(transactionService.getPendingTransactionsForUser(userId).stream().map(t -> convertToDTO(t, userId)).collect(Collectors.toList()));
     }
 
     @GetMapping("/history/{userId}")
     public ResponseEntity<List<TransactionDTO>> getUserTransactionHistory(@PathVariable Long userId) {
         List<TransactionDTO> history = transactionService.getUserHistory(userId).stream()
-                .map(this::convertToDTO)
+                .map(tx -> convertToDTO(tx, userId))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(history);
     }
@@ -131,7 +123,7 @@ public class TransactionController {
     }
 
     // --- Helpers ---
-    private TransactionDTO convertToDTO(Transaction entity) {
+    private TransactionDTO convertToDTO(Transaction entity, Long currentUserId) {
         TransactionDTO dto = new TransactionDTO();
         dto.setTransactionId(entity.getTransactionId());
         dto.setAmount(entity.getAmount());
@@ -140,9 +132,29 @@ public class TransactionController {
         dto.setTransactionDate(entity.getTransactionDate());
         dto.setDueDate(entity.getDueDate());
         dto.setNotes(entity.getNotes());
-        if (entity.getBuyer() != null) { dto.setBuyerId(entity.getBuyer().getStudentId()); dto.setBuyerName(entity.getBuyer().getFirstName() + " " + entity.getBuyer().getLastName()); }
-        if (entity.getSeller() != null) { dto.setSellerId(entity.getSeller().getStudentId()); dto.setSellerName(entity.getSeller().getFirstName() + " " + entity.getSeller().getLastName()); }
-        if (entity.getItem() != null) { dto.setItemId(entity.getItem().getItemId()); dto.setItemName(entity.getItem().getItemName()); dto.setItemImage(entity.getItem().getItemPhoto()); }
+
+        if (entity.getBuyer() != null) {
+            dto.setBuyerId(entity.getBuyer().getStudentId());
+            dto.setBuyerName(entity.getBuyer().getFirstName() + " " + entity.getBuyer().getLastName());
+        }
+        if (entity.getSeller() != null) {
+            dto.setSellerId(entity.getSeller().getStudentId());
+            dto.setSellerName(entity.getSeller().getFirstName() + " " + entity.getSeller().getLastName());
+        }
+        if (entity.getItem() != null) {
+            dto.setItemId(entity.getItem().getItemId());
+            dto.setItemName(entity.getItem().getItemName());
+            dto.setItemImage(entity.getItem().getItemPhoto());
+        }
+
+        // Check Review Status if userId is provided
+        if (currentUserId != null) {
+            boolean reviewed = reviewRepository.existsByTransaction_TransactionIdAndReviewer_StudentId(
+                entity.getTransactionId(), currentUserId
+            );
+            dto.setHasReviewed(reviewed);
+        }
+
         return dto;
     }
 

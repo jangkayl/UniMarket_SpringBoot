@@ -13,6 +13,11 @@ public class ReviewDTO {
     private LocalDateTime created_at;
     private boolean is_flagged;
 
+    private String reviewerName;
+    private String reviewerProfilePicture;
+    private String itemName;
+    private String transactionType; 
+
     public ReviewDTO() {}
 
     // Getters and Setters
@@ -39,4 +44,17 @@ public class ReviewDTO {
 
     public boolean isIs_flagged() { return is_flagged; }
     public void setIs_flagged(boolean is_flagged) { this.is_flagged = is_flagged; }
+
+    // New Fields
+    public String getReviewerName() { return reviewerName; }
+    public void setReviewerName(String reviewerName) { this.reviewerName = reviewerName; }
+
+    public String getReviewerProfilePicture() { return reviewerProfilePicture; }
+    public void setReviewerProfilePicture(String reviewerProfilePicture) { this.reviewerProfilePicture = reviewerProfilePicture; }
+
+    public String getItemName() { return itemName; }
+    public void setItemName(String itemName) { this.itemName = itemName; }
+
+    public String getTransactionType() { return transactionType; }
+    public void setTransactionType(String transactionType) { this.transactionType = transactionType; }
 }

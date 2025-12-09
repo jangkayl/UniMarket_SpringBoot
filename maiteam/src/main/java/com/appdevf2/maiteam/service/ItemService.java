@@ -78,6 +78,11 @@ public class ItemService {
         return itemRepository.save(item);
     }
 
+    // --- Get Items by Seller ---
+    public List<Item> getItemsBySellerId(Long sellerId) {
+        return itemRepository.findBySeller_StudentIdOrderByCreatedAtDesc(sellerId);
+    }
+
     @Transactional
     public Item updateItem(Long itemId, Item itemDetails) {
         return itemRepository.findById(itemId).map(item -> {

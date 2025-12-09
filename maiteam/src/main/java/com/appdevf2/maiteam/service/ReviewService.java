@@ -25,7 +25,34 @@ public class ReviewService {
     }
 
     public Review saveReview(Review review) {
-        // 1. Validate Reviewer
+        // 1. Validate Transaction Existence & Status
+        if (review.getTransaction() == null || review.getTransaction().getTransactionId() == null) {
+             throw new RuntimeException("Transaction ID is required.");
+        }
+
+        Transaction transaction = transactionRepository.findById(review.getTransaction().getTransactionId())
+                .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + review.getTransaction().getTransactionId()));
+
+        // Rule: Can only review Completed or Cancelled transactions
+        String status = transaction.getStatus() != null ? transaction.getStatus().toLowerCase() : "";
+        if (!status.equals("completed") && !status.equals("cancelled")) {
+            throw new RuntimeException("You can only review completed or cancelled transactions.");
+        }
+
+        // Rule: One review per transaction per person
+        if (review.getReviewer() != null && review.getReviewer().getStudentId() != null) {
+            boolean alreadyReviewed = reviewRepo.existsByTransaction_TransactionIdAndReviewer_StudentId(
+                transaction.getTransactionId(), 
+                review.getReviewer().getStudentId()
+            );
+            if (alreadyReviewed) {
+                throw new RuntimeException("You have already reviewed this transaction.");
+            }
+        }
+        
+        review.setTransaction(transaction);
+
+        // 2. Validate Reviewer
         if (review.getReviewer() != null && review.getReviewer().getStudentId() != null) {
             Student reviewer = studentRepository.findById(review.getReviewer().getStudentId())
                     .orElseThrow(() -> new RuntimeException("Reviewer not found with ID: " + review.getReviewer().getStudentId()));
@@ -34,7 +61,7 @@ public class ReviewService {
             throw new RuntimeException("Reviewer ID is required.");
         }
 
-        // 2. Validate Reviewee
+        // 3. Validate Reviewee
         if (review.getReviewee() != null && review.getReviewee().getStudentId() != null) {
             Student reviewee = studentRepository.findById(review.getReviewee().getStudentId())
                     .orElseThrow(() -> new RuntimeException("Reviewee not found with ID: " + review.getReviewee().getStudentId()));
@@ -43,18 +70,17 @@ public class ReviewService {
             throw new RuntimeException("Reviewee ID is required.");
         }
 
-        // 3. Validate Transaction (Optional, but if provided must exist)
-        if (review.getTransaction() != null && review.getTransaction().getTransactionId() != null) {
-            Transaction transaction = transactionRepository.findById(review.getTransaction().getTransactionId())
-                    .orElseThrow(() -> new RuntimeException("Transaction not found with ID: " + review.getTransaction().getTransactionId()));
-            review.setTransaction(transaction);
-        }
-
+        // Set timestamp if not present
         if(review.getCreated_at() == null) {
             review.setCreated_at(LocalDateTime.now());
         }
 
         return reviewRepo.save(review);
+    }
+
+    // --- NEW: Get Reviews for a specific user (Reviewee) ---
+    public List<Review> getReviewsForUser(Long userId) {
+        return reviewRepo.findByReviewee_StudentId(userId);
     }
 
     public List<Review> getAllReview() {

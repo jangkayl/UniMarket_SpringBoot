@@ -21,6 +21,8 @@ public class TransactionDTO {
     private String sellerName;
     private String itemImage; 
 
+    private boolean hasReviewed; 
+
     public TransactionDTO() {}
 
     // Getters and Setters
@@ -65,4 +67,7 @@ public class TransactionDTO {
 
     public String getItemImage() { return itemImage; }
     public void setItemImage(String itemImage) { this.itemImage = itemImage; }
+
+    public boolean isHasReviewed() { return hasReviewed; }
+    public void setHasReviewed(boolean hasReviewed) { this.hasReviewed = hasReviewed; }
 }
